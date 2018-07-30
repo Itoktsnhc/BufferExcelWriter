@@ -5,7 +5,7 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <Folder Include="TemplateFile\" />
+    <Folder Include="TemplateFile\xl\worksheets\" />
   </ItemGroup>
 
 </Project>
