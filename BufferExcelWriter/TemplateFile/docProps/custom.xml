@@ -1,9 +1,0 @@
-<?xml version="1.0"?>
-<q1:Properties xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main" xmlns:vt="http://schemas.openxmlformats.org/officeDocument/2006/docPropsVTypes" xmlns:q1="http://schemas.openxmlformats.org/officeDocument/2006/custom-properties">
-  <q1:property fmtid="{D5CDD505-2E9C-101B-9397-08002B2CF9AE}" pid="2" name="Generator">
-    <vt:lpwstr>NPOI</vt:lpwstr>
-  </q1:property>
-  <q1:property fmtid="{D5CDD505-2E9C-101B-9397-08002B2CF9AE}" pid="3" name="Generator Version">
-    <vt:lpwstr>1.1.0</vt:lpwstr>
-  </q1:property>
-</q1:Properties>

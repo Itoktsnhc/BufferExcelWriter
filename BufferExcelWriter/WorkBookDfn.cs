@@ -1,18 +1,53 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.IO;
 using System.IO.Compression;
 using System.Linq;
+using System.Text;
 using System.Threading.Tasks;
 using System.Transactions;
 using System.Xml;
 
 namespace BufferExcelWriter
 {
-    public class WorkBookDfn
+    public class WorkBookDfn : IDisposable
     {
-        public ZipArchive ZipArchive { get; set; }
+        public WorkBookDfn()
+        {
+            WorkingFolder = Guid.NewGuid().ToString("N");
+            if (Directory.Exists(WorkingFolder))
+            {
+                var existDir = new DirectoryInfo(WorkingFolder);
+                existDir.Delete(true);
+            }
+            Directory.CreateDirectory(WorkingFolder);
+            using (var fs = File.OpenRead(@"C:\Users\itok\Desktop\advTemplate.zip"))
+
+            {
+                var zipFile = new ZipArchive(fs);
+                zipFile.ExtractToDirectory(WorkingFolder);
+            }
+
+            Sheets = new List<WorkSheetDfn>();
+            FolderEntry = new FolderEntry(WorkingFolder);
+            Stopwatch = new Stopwatch();
+        }
+
+        private readonly Dictionary<Int32, Int32> _rowOffsetDic = new Dictionary<Int32, Int32>();
+        internal String WorkingFolder;
+        public Stopwatch Stopwatch { get; set; }
+        internal FolderEntry FolderEntry { get; set; }
         public IList<WorkSheetDfn> Sheets { get; set; }
+
+        public void CleanSheetsBuffer()
+        {
+            foreach (var sheet in Sheets)
+            {
+                sheet.BufferedRows.Clear();
+                GC.Collect();
+            }
+        }
 
         public async Task OpenWriteExcelAsync()
         {
@@ -28,13 +63,13 @@ namespace BufferExcelWriter
 
             foreach (var sheet in Sheets)
             {
-
+                _rowOffsetDic[sheet.SheetNum] = 1;
                 #region Update [Content_Types].xml
 
-                var contentTypeEntry = ZipArchive.GetEntry("[Content_Types].xml");
+                var contentTypeEntry = FolderEntry.GetEntry("[Content_Types].xml");
                 if (contentTypeEntry == null)
                 {
-                    throw new FileNotFoundException("[Content_Types].xml Not Found in ZipArchive");
+                    throw new FileNotFoundException("[Content_Types].xml");
                 }
 
                 using (var contentTypeStream = contentTypeEntry.Open())
@@ -42,17 +77,21 @@ namespace BufferExcelWriter
                     using (var sr = new StreamReader(contentTypeStream))
                     {
                         var doc = new XmlDocument();
-                        doc.Load(await sr.ReadToEndAsync());
+                        doc.LoadXml(await sr.ReadToEndAsync());
+                        var types = doc.GetElementsByTagName("Types")
+                            .Cast<XmlNode>()
+                            .First();
                         if (doc.DocumentElement != null)
                         {
                             var element = doc.CreateElement("Override", doc.DocumentElement.NamespaceURI);
                             element.SetAttribute("PartName", $"/xl/worksheets/sheet{sheet.SheetNum}.xml");
                             element.SetAttribute("ContentType",
                                 "application/vnd.openxmlformats-officedocument.spreadsheetml.worksheet+xml");
-                            contentTypeStream.Position = 0;
-                            contentTypeStream.SetLength(0);
-                            doc.Save(contentTypeStream);
+                            types.AppendChild(element);
                         }
+                        contentTypeStream.Position = 0;
+                        contentTypeStream.SetLength(0);
+                        doc.Save(contentTypeStream);
                     }
                 }
 
@@ -62,10 +101,10 @@ namespace BufferExcelWriter
                 #region Update xl/_rels/workbook.xml.rels
 
                 string identifier = "rId";
-                var relsEntry = ZipArchive.GetEntry("xl/_rels/workbook.xml.rels");
+                var relsEntry = FolderEntry.GetEntry("xl/_rels/workbook.xml.rels");
                 if (relsEntry == null)
                 {
-                    throw new FileNotFoundException("xl/_rels/workbook.xml.rels Not Found in ZipArchive");
+                    throw new FileNotFoundException("xl/_rels/workbook.xml.rels");
                 }
 
                 using (var relsStream = relsEntry.Open())
@@ -102,7 +141,7 @@ namespace BufferExcelWriter
 
                 #region Update xl/workbook.xml
 
-                var workbookEntry = ZipArchive.GetEntry("xl/workbook.xml Not Found in ZipArchive");
+                var workbookEntry = FolderEntry.GetEntry("xl/workbook.xml");
                 if (workbookEntry == null)
                 {
                     throw new FileNotFoundException("xl/workbook.xml");
@@ -140,10 +179,10 @@ namespace BufferExcelWriter
 
                 #region Update docProps/app.xml
 
-                var appEntry = ZipArchive.GetEntry("docProps/app.xml");
+                var appEntry = FolderEntry.GetEntry("docProps/app.xml");
                 if (appEntry == null)
                 {
-                    throw new FileNotFoundException("docProps/app.xml Not Found in ZipArchive");
+                    throw new FileNotFoundException("docProps/app.xml Not Found in FolderEntry");
                 }
 
                 using (var appStream = appEntry.Open())
@@ -169,7 +208,8 @@ namespace BufferExcelWriter
                         var tmp2 = xd.GetElementsByTagName("vt:i4")
                             .Cast<XmlNode>()
                             .Single();
-                        tmp2.InnerText = (Convert.ToInt32(tmp2.InnerText) + 1).ToString();
+                        var val = String.IsNullOrWhiteSpace(tmp2.InnerText) ? 1 : Convert.ToInt32(tmp2.InnerText) + 1;
+                        tmp2.InnerText = val.ToString();
                         appStream.Position = 0;
                         appStream.SetLength(0);
                         xd.Save(appStream);
@@ -181,74 +221,132 @@ namespace BufferExcelWriter
 
                 #region Init sheetN.xml
 
-                var sheetEntry = ZipArchive.CreateEntry(sheet.GetEntryName());
-                using (var sheetStream = sheetEntry.Open())
+                var sheetEntry = FolderEntry.CreateEntry(sheet.GetEntryName());
+                sheet.FileStream = sheetEntry.Open();
+                sheet.StreamWriter = new StreamWriter(sheet.FileStream);
+                //sheet.FileStream.Position = sheet.FileStream.Length;
+                await sheet.StreamWriter.WriteAsync(WorksheetDefaultHeaders);
+                if (sheet.Header == null)
                 {
-                    using (var sw = new StreamWriter(sheetStream))
-                    {
-                        await sw.WriteAsync(WorksheetDefaultHeaders);
-                    }
+                    throw new Exception("Header mustn't be null!");
                 }
+                await sheet.StreamWriter.WriteAsync(sheet.Header.ToXmlString(1, sheet.Header, sheet.NullValStr));
+                _rowOffsetDic[sheet.SheetNum]++;
+
+
 
                 #endregion
             }
         }
 
-        public async Task AppendBufferRowsAsync()
+        public async Task FlushBufferRowsAsync()
         {
-            foreach (var currentSheet in Sheets)
+            Stopwatch.Start();
+            foreach (var sheet in Sheets)
             {
-                var sheetEntry = ZipArchive.GetEntry(currentSheet.GetEntryName());
+                var sheetEntry = FolderEntry.GetEntry(sheet.GetEntryName());
                 if (sheetEntry == null)
                 {
                     throw new Exception("Init needed!!");
                 }
-                using (var sheetStream = sheetEntry.Open())
+
+                var sb = new StringBuilder();
+                for (var rowIndex = 0; rowIndex < sheet.BufferedRows.Count(); rowIndex++)
                 {
-                    using (var sw = new StreamWriter(sheetStream))
-                    {
-
-                        if (currentSheet.Header == null)
-                        {
-                            throw new Exception("Header mustn't be null!");
-                        }
-
-                        await sw.WriteAsync(currentSheet.Header.ToXmlString(1, currentSheet.Header, currentSheet.NullValStr));
-                        for (var rowIndex = 0; rowIndex < currentSheet.BufferedRows.Count(); rowIndex++)
-                        {
-                            var currentRow = currentSheet.BufferedRows[rowIndex];
-                            await sw.WriteAsync(currentRow.ToXmlString(rowIndex + 2, currentSheet.Header, currentSheet.NullValStr));
-                        }
-                        await sw.FlushAsync();
-                    }
+                    var currentRow = sheet.BufferedRows[rowIndex];
+                    //var buffer = Encoding.UTF8.GetBytes(currentRow.ToXmlString(_rowOffsetDic[sheet.SheetNum],
+                    //    sheet.Header, sheet.NullValStr));
+                    //await sheetStream.WriteAsync(buffer, 0, buffer.Length);
+                    sb.Append(currentRow.ToXmlString(_rowOffsetDic[sheet.SheetNum], sheet.Header,
+                        sheet.NullValStr));
+                    _rowOffsetDic[sheet.SheetNum]++;
                 }
+                await sheet.StreamWriter.WriteAsync(sb.ToString());
+
+                //await sheetStream.FlushAsync();
+                await sheet.StreamWriter.FlushAsync();
+
             }
+            Stopwatch.Stop();
+
+            Console.WriteLine(Stopwatch.Elapsed);
+            Stopwatch.Reset();
 
         }
 
-        public async Task CloseWriteExcelAsync()
+        public async Task<Stream> CloseExcelAndGetStreamAsync()
         {
+
             foreach (var sheet in Sheets)
             {
-                var sheetEntry = ZipArchive.CreateEntry(sheet.GetEntryName());
-                using (var sheetStream = sheetEntry.Open())
+                var sheetEntry = FolderEntry.GetEntry(sheet.GetEntryName());
+                if (sheetEntry == null)
                 {
-                    using (var sw = new StreamWriter(sheetStream))
-                    {
-                        await sw.WriteAsync(SheetDataDefaultFooter);
-                        await sw.WriteAsync(WorksheetDefaultFooter);
-                        await sw.FlushAsync();
-                    }
+                    throw new FileNotFoundException(sheet.GetEntryName());
                 }
+                await sheet.StreamWriter.WriteAsync(SheetDataDefaultFooter);
+                await sheet.StreamWriter.WriteAsync(WorksheetDefaultFooter);
+                await sheet.StreamWriter.FlushAsync();
+                sheet.StreamWriter.Dispose();
             }
+            ZipFile.CreateFromDirectory(WorkingFolder, WorkingFolder + ".zip", CompressionLevel.Fastest, true);
+            return File.Open(WorkingFolder + ".zip", FileMode.Open);
         }
-
-
 
 
 
         public const String WorksheetDefaultHeaders = "<?xml version=\"1.0\" encoding=\"UTF-8\" standalone=\"yes\"?> <worksheet xmlns=\"http://schemas.openxmlformats.org/spreadsheetml/2006/main\" xmlns:r=\"http://schemas.openxmlformats.org/officeDocument/2006/relationships\" xmlns:mc=\"http://schemas.openxmlformats.org/markup-compatibility/2006\" mc:Ignorable=\"x14ac xr xr2 xr3\" xmlns:x14ac=\"http://schemas.microsoft.com/office/spreadsheetml/2009/9/ac\" xmlns:xr=\"http://schemas.microsoft.com/office/spreadsheetml/2014/revision\" xmlns:xr2=\"http://schemas.microsoft.com/office/spreadsheetml/2015/revision2\" xmlns:xr3=\"http://schemas.microsoft.com/office/spreadsheetml/2016/revision3\" xr:uid=\"{00000000-0001-0000-0000-000000000000}\"> <sheetData>";
         public const String WorksheetDefaultFooter = "</worksheet>";
         public const String SheetDataDefaultFooter = "</sheetData>";
+
+        public void Dispose()
+        {
+            foreach (var sheet in Sheets)
+            {
+                sheet.StreamWriter.Dispose();
+            }
+            if (Directory.Exists(WorkingFolder))
+            {
+                Directory.Delete(WorkingFolder, true);
+            }
+            if (File.Exists(WorkingFolder + ".zip"))
+            {
+
+                File.Delete(WorkingFolder + ".zip");
+            }
+        }
+    }
+    internal class FolderEntry
+    {
+        private readonly String _dirPath;
+
+        public FolderEntry(String dirPath)
+        {
+            _dirPath = dirPath;
+        }
+
+        public FileEntry GetEntry(String filename)
+        {
+            return new FileEntry(new FileInfo(Path.Combine(_dirPath, filename)));
+        }
+
+        public FileEntry CreateEntry(String filename)
+        {
+            return GetEntry(filename);
+        }
+    }
+
+    internal class FileEntry
+    {
+        private readonly FileInfo _fileInfo;
+        public FileEntry(FileInfo fileInfo)
+        {
+            _fileInfo = fileInfo;
+        }
+
+        public Stream Open()
+        {
+            return _fileInfo.Open(FileMode.OpenOrCreate);
+        }
     }
 }

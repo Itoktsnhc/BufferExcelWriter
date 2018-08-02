@@ -32,7 +32,12 @@ namespace BufferExcelWriter
 
         internal String ToXmlString(Int32 rowNumber, Int32 columnNumber)
         {
-            return $"<c r=\"{ExcelExportHelper.GetExcelColumnName(columnNumber)}{rowNumber}\" t=\"inlineStr\"><is><t>{CellValue}</t></is></c>";
+            var strVal = CellValue.Replace("]]>", "]]&gt;");
+            if (strVal.Length > 32766)
+            {
+                strVal = strVal.Substring(0, 32766);
+            }
+            return $"<c r=\"{ExcelExportHelper.GetExcelColumnName(columnNumber)}{rowNumber}\" t=\"inlineStr\"><is><t>{strVal}</t></is></c>";
         }
     }
 
