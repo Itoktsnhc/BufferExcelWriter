@@ -1,67 +1,60 @@
 ﻿using System;
-using System.Collections;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.IO;
-using System.IO.Compression;
 using System.Linq;
-using System.Reflection.Metadata;
 
 namespace BufferExcelWriter.Sample
 {
-    class Program
+    internal class Program
     {
-        static void Main(string[] args)
+        private static void Main(String[] args)
         {
-            var header = new RowDfn()
+            var header = new RowDfn
             {
-                Cells = new List<CellDfn>()
-                    {
-                        new CellDfn("Name"),
-                        new CellDfn("Index"),
-                        new CellDfn("noVal")
-                    }
+                Cells = new List<CellDfn>
+                {
+                    new CellDfn("Name"),
+                    new CellDfn("Index"),
+                    new CellDfn("noVal")
+                }
             };
-            var oddSheet = new WorkSheetDfn("Odd", header);//add headers
+            var oddSheet = new WorkSheetDfn("Odd", header); //add headers
             var evenSheet = new WorkSheetDfn("Even", header);
             var wb = new WorkBookDfn();
             wb.Sheets.Add(oddSheet);
             wb.Sheets.Add(evenSheet);
 
 
-            wb.OpenWriteExcelAsync().Wait();//open write
-
+            wb.OpenWriteExcelAsync().Wait(); //open write
+            var sw = new Stopwatch();
             foreach (var outerIndex in Enumerable.Range(0, 100))
             {
+                sw.Reset();
                 var size = 10000;
                 foreach (var index in Enumerable.Range(outerIndex * size, size))
-                {
                     if (index % 2 == 0)
-                    {
-                        evenSheet.BufferedRows.Add(new RowDfn()
+                        evenSheet.BufferedRows.Add(new RowDfn
                         {
-                            Cells = new List<CellDfn>()
-                                {
-                                    new CellDfn("Name",$"foo{index}"),
-                                    new CellDfn("Index",index.ToString())
-                                }
+                            Cells = new List<CellDfn>
+                            {
+                                new CellDfn("Name", $"foo{index}"),
+                                new CellDfn("Index", index.ToString())
+                            }
                         });
-                    }
                     else
-                    {
-
-                        oddSheet.BufferedRows.Add(new RowDfn()
+                        oddSheet.BufferedRows.Add(new RowDfn
                         {
-                            Cells = new List<CellDfn>()
-                                {
-                                    new CellDfn("Name",$"foo{index}"),
-                                    new CellDfn("Index",index.ToString())
-                                }
+                            Cells = new List<CellDfn>
+                            {
+                                new CellDfn("Name", $"foo{index}"),
+                                new CellDfn("Index", index.ToString())
+                            }
                         });
-                    }
-                }
-
-                wb.FlushBufferRowsAsync().Wait();//flushDataAndClean
-                wb.CleanSheetsBuffer();
+                sw.Start();
+                wb.FlushBufferedRowsAsync(true).Wait(); //flushDataAndClean
+                sw.Stop();
+                Console.WriteLine(sw.Elapsed);
             }
 
             using (var fs = File.Create($"{DateTime.Now.Ticks}.xlsx"))
@@ -72,13 +65,18 @@ namespace BufferExcelWriter.Sample
                     stream.CopyTo(fs);
                 }
             }
+
+            sw.Reset();
+            sw.Start();
             wb.Dispose();
+            sw.Stop();
+            Console.WriteLine($"clean cost : {sw.Elapsed}");
             Console.WriteLine("Over");
             Console.ReadLine();
         }
     }
 
-    class Person
+    internal class Person
     {
         public String Name { get; set; }
         public Boolean Gender { get; set; }

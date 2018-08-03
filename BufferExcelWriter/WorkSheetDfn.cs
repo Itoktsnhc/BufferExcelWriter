@@ -1,7 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.IO;
-using System.Text;
 
 namespace BufferExcelWriter
 {
@@ -22,6 +21,7 @@ namespace BufferExcelWriter
         internal Int32 SheetNum { get; set; }
         internal Stream FileStream { get; set; }
         internal StreamWriter StreamWriter { get; set; }
+
         internal String GetEntryName()
         {
             return $"xl/worksheets/sheet{SheetNum}.xml";

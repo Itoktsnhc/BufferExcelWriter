@@ -1,6 +1,4 @@
 ﻿using System;
-using System.Collections.Generic;
-using System.Text;
 
 namespace BufferExcelWriter
 {
@@ -8,7 +6,8 @@ namespace BufferExcelWriter
     {
         public static String GenerateFilterXmlEle(Int32 columnCount)
         {
-            return $@"<autoFilter ref=""A1:{GetExcelColumnName(columnCount)}1"" xr:uid=""{Guid.NewGuid().ToString("B").ToUpper()}""/>";
+            return
+                $@"<autoFilter ref=""A1:{GetExcelColumnName(columnCount)}1"" xr:uid=""{Guid.NewGuid().ToString("B").ToUpper()}""/>";
         }
 
         public static String GetExcelColumnName(Int32 columnNumber)
@@ -20,8 +19,9 @@ namespace BufferExcelWriter
             {
                 var modulo = (dividend - 1) % 26;
                 columnName = String.Concat(Convert.ToChar(65 + modulo), columnName);
-                dividend = (Int32)((dividend - modulo) / 26);
+                dividend = (dividend - modulo) / 26;
             }
+
             return columnName;
         }
     }

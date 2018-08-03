@@ -9,7 +9,7 @@ namespace BufferExcelWriter
     {
         public IList<CellDfn> Cells { get; set; }
 
-        internal String ToXmlString(Int32 rowNumber, RowDfn header, String nullValSymbol="-")
+        internal String ToXmlString(Int32 rowNumber, RowDfn header, String nullValSymbol = "-")
         {
             var row = new StringBuilder();
             if (Cells != null && Cells.Any())
@@ -25,7 +25,6 @@ namespace BufferExcelWriter
 
                         row.Append(cell.ToXmlString(rowNumber, columnNumber + 1));
                     }
-
                 }
                 finally
                 {

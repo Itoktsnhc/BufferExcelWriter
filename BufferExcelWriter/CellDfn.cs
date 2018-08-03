@@ -1,13 +1,11 @@
 ﻿using System;
-using System.Collections.Generic;
-using System.Text;
 
 namespace BufferExcelWriter
 {
     public class CellDfn
     {
         /// <summary>
-        /// create normalCell
+        ///     create normalCell
         /// </summary>
         /// <param name="columnHeaderName"></param>
         /// <param name="value"></param>
@@ -16,8 +14,9 @@ namespace BufferExcelWriter
             ColumnHeaderName = columnHeaderName;
             CellValue = value;
         }
+
         /// <summary>
-        /// create headerCell
+        ///     create headerCell
         /// </summary>
         /// <param name="headerName"></param>
         public CellDfn(String headerName)
@@ -33,12 +32,9 @@ namespace BufferExcelWriter
         internal String ToXmlString(Int32 rowNumber, Int32 columnNumber)
         {
             var strVal = CellValue.Replace("]]>", "]]&gt;");
-            if (strVal.Length > 32766)
-            {
-                strVal = strVal.Substring(0, 32766);
-            }
-            return $"<c r=\"{ExcelExportHelper.GetExcelColumnName(columnNumber)}{rowNumber}\" t=\"inlineStr\"><is><t>{strVal}</t></is></c>";
+            if (strVal.Length > 32766) strVal = strVal.Substring(0, 32766);
+            return
+                $"<c r=\"{ExcelExportHelper.GetExcelColumnName(columnNumber)}{rowNumber}\" t=\"inlineStr\"><is><t>{strVal}</t></is></c>";
         }
     }
-
 }
