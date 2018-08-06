@@ -4,8 +4,7 @@
 Samples in BufferExcelWriter.Sample
 
 ```CSharp
-    
-            var wb = new WorkBookDfn();//new workbook
+ var wb = new WorkBookDfn(); //new workbook
             try
             {
                 var header = new RowDfn //create header
@@ -27,8 +26,6 @@ Samples in BufferExcelWriter.Sample
                 foreach (var outerIndex in Enumerable.Range(0, 100))
                 {
                     foreach (var index in Enumerable.Range(outerIndex * size, size))
-                    {
-
                         sheet.BufferedRows.Add(new RowDfn
                         {
                             Cells = new List<CellDfn>
@@ -37,7 +34,6 @@ Samples in BufferExcelWriter.Sample
                                 new CellDfn("Index", index.ToString())
                             }
                         });
-                    }
 
                     await wb.FlushBufferedRowsAsync(true); //flush buffered row and clean buffered row
                 }
@@ -45,8 +41,7 @@ Samples in BufferExcelWriter.Sample
 
                 using (var fs = File.Create($"{DateTime.Now.Ticks}.xlsx"))
                 {
-                    using (var stream = await wb.CloseExcelAndGetStreamAsync()
-                    ) //close write and get stream from finished job
+                    using (var stream = await wb.CloseExcelAndGetStreamAsync()) //close write and get stream from finished job
                     {
                         stream.Position = 0;
                         stream.CopyTo(fs);
@@ -60,6 +55,6 @@ Samples in BufferExcelWriter.Sample
             }
             finally
             {
-                wb.Dispose();//clean stream、files and something else;
+                wb.Dispose(); //clean stream、files and something else;
             }
 ```
