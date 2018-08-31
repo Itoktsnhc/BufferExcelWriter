@@ -5,7 +5,7 @@ VisualStudioVersion = 15.0.27703.2042
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "BufferExcelWriter", "BufferExcelWriter\BufferExcelWriter.csproj", "{B52331BB-51AB-413F-B078-25D7BF48537E}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "BufferExcelWriter.Sample", "BufferExcelWriter.Sample\BufferExcelWriter.Sample.csproj", "{92C86BD2-A5B8-4ABD-A871-336A8C29707A}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "BufferExcelWriter.Sample", "BufferExcelWriter.Sample\BufferExcelWriter.Sample.csproj", "{92C86BD2-A5B8-4ABD-A871-336A8C29707A}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
