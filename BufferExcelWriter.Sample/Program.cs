@@ -14,7 +14,7 @@ namespace BufferExcelWriter.Sample
             {
                 Cells = new List<CellDfn>
                 {
-                    new CellDfn("Name"),
+                    new CellDfn("Nam®e"),
                     new CellDfn("Index"),
                     new CellDfn("noVal")
                 }
@@ -28,17 +28,17 @@ namespace BufferExcelWriter.Sample
 
             wb.OpenWriteExcelAsync().Wait(); //open write
             var sw = new Stopwatch();
-            foreach (var outerIndex in Enumerable.Range(0, 100))
+            foreach (var outerIndex in Enumerable.Range(0, 10))
             {
                 sw.Reset();
-                var size = 10000;
+                var size = 1000;
                 foreach (var index in Enumerable.Range(outerIndex * size, size))
                     if (index % 2 == 0)
                         evenSheet.BufferedRows.Add(new RowDfn
                         {
                             Cells = new List<CellDfn>
                             {
-                                new CellDfn("Name", $"foo{index}"),
+                                new CellDfn("Name", $"fo&o{index}"),
                                 new CellDfn("Index", index.ToString())
                             }
                         });
@@ -47,7 +47,7 @@ namespace BufferExcelWriter.Sample
                         {
                             Cells = new List<CellDfn>
                             {
-                                new CellDfn("Name", $"foo{index}"),
+                                new CellDfn("Nam®e", $"f￥￥￥©$ \"oo{index}"),
                                 new CellDfn("Index", index.ToString())
                             }
                         });
