@@ -15,7 +15,7 @@ namespace BufferExcelWriter
         }
 
         public IList<RowDfn> BufferedRows { get; set; }
-        internal RowDfn Header { get; set; }
+        public RowDfn Header { get; set; }
         internal String NullValStr { get; set; }
         internal String Name { get; set; }
         internal Int32 SheetNum { get; set; }

@@ -2,13 +2,15 @@
 
   <PropertyGroup>
     <TargetFramework>netstandard2.0</TargetFramework>
-    <Version>0.0.2</Version>
+    <Version>0.0.3</Version>
     <Authors>itoktsnhc@hotmail.com</Authors>
-    <Description>Wrap Data with CDATA</Description>
+    <Description>BufferExcelWriter</Description>
     <PackageLicenseUrl>https://github.com/Itoktsnhc/BufferExcelWriter/blob/master/LICENSE</PackageLicenseUrl>
     <PackageProjectUrl>https://github.com/Itoktsnhc/BufferExcelWriter</PackageProjectUrl>
     <RepositoryUrl>https://github.com/Itoktsnhc/BufferExcelWriter</RepositoryUrl>
-    <PackageReleaseNotes>Wrap Data with CDATA</PackageReleaseNotes>
+    <PackageReleaseNotes>1.BufferExcelWriter
+2.Wrap Data with CDATA
+3.Make sheet's Header public</PackageReleaseNotes>
   </PropertyGroup>
 
   <ItemGroup>
