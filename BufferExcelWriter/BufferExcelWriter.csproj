@@ -2,12 +2,13 @@
 
   <PropertyGroup>
     <TargetFramework>netstandard2.0</TargetFramework>
-    <Version>0.0.1</Version>
+    <Version>0.0.2</Version>
     <Authors>itoktsnhc@hotmail.com</Authors>
-    <Description></Description>
+    <Description>Wrap Data with CDATA</Description>
     <PackageLicenseUrl>https://github.com/Itoktsnhc/BufferExcelWriter/blob/master/LICENSE</PackageLicenseUrl>
     <PackageProjectUrl>https://github.com/Itoktsnhc/BufferExcelWriter</PackageProjectUrl>
     <RepositoryUrl>https://github.com/Itoktsnhc/BufferExcelWriter</RepositoryUrl>
+    <PackageReleaseNotes>Wrap Data with CDATA</PackageReleaseNotes>
   </PropertyGroup>
 
   <ItemGroup>
