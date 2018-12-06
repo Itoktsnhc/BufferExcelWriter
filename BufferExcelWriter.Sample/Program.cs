@@ -4,13 +4,12 @@ using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
-using Newtonsoft.Json;
 
 namespace BufferExcelWriter.Sample
 {
     internal class Program
     {
-        private static async Task Main(string[] args)
+        private static async Task Main()
         {
             await WriteTestDataAsync1();
 
@@ -30,7 +29,7 @@ namespace BufferExcelWriter.Sample
             };
             var oddSheet = new WorkSheetDfn("Odd", header); //add headers
             var evenSheet = new WorkSheetDfn("Even", header);
-            var wb = new WorkBookDfn();
+            var wb = new WorkBookDfn("tempFolder");
             wb.Sheets.Add(oddSheet);
             wb.Sheets.Add(evenSheet);
 
@@ -84,6 +83,6 @@ namespace BufferExcelWriter.Sample
             Console.ReadLine();
         }
 
-       
+
     }
 }

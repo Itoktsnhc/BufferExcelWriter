@@ -1,60 +1,73 @@
 # BufferExcelWriter
 
 
-Samples in BufferExcelWriter.Sample
+Samples Project => BufferExcelWriter.Sample
 
 ```CSharp
-var wb = new WorkBookDfn(); //new workbook
-try
-{
-    var header = new RowDfn //create header
-    {
-        Cells = new List<CellDfn>
+public static async Task WriteTestDataAsync1()
         {
-            new CellDfn("Name"),
-            new CellDfn("Index"),
-            new CellDfn("noVal")
-        }
-    };
-    var sheet = new WorkSheetDfn("sheetName", header); //new sheet
-    wb.Sheets.Add(sheet); //add sheet to workbook
-
-    await wb.OpenWriteExcelAsync(); //init write;
-    /*
-    balabala generate data like: */
-    var size = 10000;
-    foreach (var outerIndex in Enumerable.Range(0, 100))
-    {
-        foreach (var index in Enumerable.Range(outerIndex * size, size))
-            sheet.BufferedRows.Add(new RowDfn
+            var header = new RowDfn
             {
                 Cells = new List<CellDfn>
                 {
-                    new CellDfn("Name", $"foo{index}"),
-                    new CellDfn("Index", index.ToString())
+                    new CellDfn("Nam®e"),
+                    new CellDfn("Index"),
+                    new CellDfn("noVal")
                 }
-            });
+            };
+            var oddSheet = new WorkSheetDfn("Odd", header); //add headers
+            var evenSheet = new WorkSheetDfn("Even", header);
+            var wb = new WorkBookDfn("tempFolder");
+            wb.Sheets.Add(oddSheet);
+            wb.Sheets.Add(evenSheet);
 
-        await wb.FlushBufferedRowsAsync(true); //flush buffered row and clean buffered row
-    }
 
+            await wb.OpenWriteExcelAsync(); //open write
+            var sw = new Stopwatch();
+            foreach (var outerIndex in Enumerable.Range(0, 10))
+            {
+                sw.Reset();
+                var size = 1000;
+                foreach (var index in Enumerable.Range(outerIndex * size, size))
+                    if (index % 2 == 0)
+                        evenSheet.BufferedRows.Add(new RowDfn
+                        {
+                            Cells = new List<CellDfn>
+                            {
+                                new CellDfn("Name", $"fo&o{index}"),
+                                new CellDfn("Index", index.ToString())
+                            }
+                        });
+                    else
+                        oddSheet.BufferedRows.Add(new RowDfn
+                        {
+                            Cells = new List<CellDfn>
+                            {
+                                new CellDfn("Nam®e", $"f￥￥￥©$ \"oo{index}"),
+                                new CellDfn("Index", index.ToString())
+                            }
+                        });
+                sw.Start();
+                await wb.FlushBufferedRowsAsync(true); //flushDataAndClean
+                sw.Stop();
+                Console.WriteLine(sw.Elapsed);
+            }
 
-    using (var fs = File.Create($"{DateTime.Now.Ticks}.xlsx"))
-    {
-        using (var stream = await wb.CloseExcelAndGetStreamAsync()) //close write and get stream from finished job
-        {
-            stream.Position = 0;
-            stream.CopyTo(fs);
+            using (var fs = File.Create($"{DateTime.Now.Ticks}.xlsx"))
+            {
+                using (var stream = wb.CloseExcelAndGetStreamAsync().Result)
+                {
+                    stream.Position = 0;
+                    stream.CopyTo(fs);
+                }
+            }
+
+            sw.Reset();
+            sw.Start();
+            wb.Dispose();
+            sw.Stop();
+            Console.WriteLine($"clean cost : {sw.Elapsed}");
+            Console.WriteLine("Over");
+            Console.ReadLine();
         }
-    }
-}
-catch (Exception e)
-{
-    Console.WriteLine(e);
-    throw;
-}
-finally
-{
-    wb.Dispose(); //clean stream、files and something else;
-}
 ```

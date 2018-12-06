@@ -11,7 +11,7 @@
     <PackageReleaseNotes>1.BufferExcelWriter
 2.Wrap Data with CDATA
 3.Make sheet's Header public
-4.fix null reference exceptions</PackageReleaseNotes>
+4.fix null reference exceptions;add custom temp folder support;clean temp folder when workbook's dispose</PackageReleaseNotes>
   </PropertyGroup>
 
   <ItemGroup>
