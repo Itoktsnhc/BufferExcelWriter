@@ -2,7 +2,7 @@
 
   <PropertyGroup>
     <TargetFramework>netstandard2.0</TargetFramework>
-    <Version>0.0.4</Version>
+    <Version>0.0.5</Version>
     <Authors>itoktsnhc@hotmail.com</Authors>
     <Description>BufferExcelWriter</Description>
     <PackageLicenseUrl>https://github.com/Itoktsnhc/BufferExcelWriter/blob/master/LICENSE</PackageLicenseUrl>
