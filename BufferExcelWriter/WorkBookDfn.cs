@@ -12,20 +12,24 @@ namespace BufferExcelWriter
 {
     public class WorkBookDfn : IDisposable
     {
-        internal const String WorksheetDefaultHeaders =
+        internal const string WorksheetDefaultHeaders =
             "<?xml version=\"1.0\" encoding=\"UTF-8\" standalone=\"yes\"?> <worksheet xmlns=\"http://schemas.openxmlformats.org/spreadsheetml/2006/main\" xmlns:r=\"http://schemas.openxmlformats.org/officeDocument/2006/relationships\" xmlns:mc=\"http://schemas.openxmlformats.org/markup-compatibility/2006\" mc:Ignorable=\"x14ac xr xr2 xr3\" xmlns:x14ac=\"http://schemas.microsoft.com/office/spreadsheetml/2009/9/ac\" xmlns:xr=\"http://schemas.microsoft.com/office/spreadsheetml/2014/revision\" xmlns:xr2=\"http://schemas.microsoft.com/office/spreadsheetml/2015/revision2\" xmlns:xr3=\"http://schemas.microsoft.com/office/spreadsheetml/2016/revision3\" xr:uid=\"{00000000-0001-0000-0000-000000000000}\"> <sheetData>";
 
-        internal const String WorksheetDefaultFooter = "</worksheet>";
-        internal const String SheetDataDefaultFooter = "</sheetData>";
+        internal const string WorksheetDefaultFooter = "</worksheet>";
+        internal const string SheetDataDefaultFooter = "</sheetData>";
 
-        private readonly Dictionary<Int32, Int32> _rowOffsetDic = new Dictionary<Int32, Int32>();
-        internal String OutPutFilePath;
+        private readonly Dictionary<int, int> _rowOffsetDic = new Dictionary<int, int>();
+        internal string OutPutFilePath;
         internal Stream OutputStream;
-        internal String WorkingFolder;
+        internal string WorkingFolder;
 
-        public WorkBookDfn()
+        public WorkBookDfn(string tempFolderBaseDirectory = null)
         {
-            WorkingFolder = Guid.NewGuid().ToString("N");
+            if (String.IsNullOrEmpty(tempFolderBaseDirectory))
+            {
+                tempFolderBaseDirectory = Environment.CurrentDirectory;
+            }
+            WorkingFolder = Path.Combine(tempFolderBaseDirectory, Guid.NewGuid().ToString("N"));
             if (Directory.Exists(WorkingFolder))
             {
                 var existDir = new DirectoryInfo(WorkingFolder);
@@ -56,8 +60,9 @@ namespace BufferExcelWriter
         public void Dispose()
         {
             foreach (var sheet in Sheets) sheet.StreamWriter.Dispose();
-            if (File.Exists(OutPutFilePath)) File.Delete(OutPutFilePath);
             OutputStream.Dispose();
+            if (Directory.Exists(WorkingFolder)) Directory.Delete(WorkingFolder);
+            if (File.Exists(OutPutFilePath)) File.Delete(OutPutFilePath);
         }
 
         public async Task OpenWriteExcelAsync()
@@ -234,7 +239,7 @@ namespace BufferExcelWriter
         ///     Flush bufferedRow data to disk and clean buffered row
         /// </summary>
         /// <returns></returns>
-        public async Task FlushBufferedRowsAsync(Boolean needGc = false)
+        public async Task FlushBufferedRowsAsync(bool needGc = false)
         {
             foreach (var sheet in Sheets)
             {
@@ -286,19 +291,19 @@ namespace BufferExcelWriter
 
     internal class FolderEntry
     {
-        private readonly String _dirPath;
+        private readonly string _dirPath;
 
-        internal FolderEntry(String dirPath)
+        internal FolderEntry(string dirPath)
         {
             _dirPath = dirPath;
         }
 
-        internal FileEntry GetEntry(String filename)
+        internal FileEntry GetEntry(string filename)
         {
             return new FileEntry(new FileInfo(Path.Combine(_dirPath, filename)));
         }
 
-        internal FileEntry CreateEntry(String filename)
+        internal FileEntry CreateEntry(string filename)
         {
             return GetEntry(filename);
         }

@@ -6,7 +6,12 @@
     <Version>1.0.1</Version>
     <PackageReleaseNotes>1.0.1</PackageReleaseNotes>
     <Description>BufferExcelWriter</Description>
+    <LangVersion>7.1</LangVersion>
   </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Newtonsoft.Json" Version="12.0.1" />
+  </ItemGroup>
 
   <ItemGroup>
     <ProjectReference Include="..\BufferExcelWriter\BufferExcelWriter.csproj" />

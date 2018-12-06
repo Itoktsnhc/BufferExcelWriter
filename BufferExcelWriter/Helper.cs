@@ -4,13 +4,7 @@ namespace BufferExcelWriter
 {
     public static class ExcelExportHelper
     {
-        public static String GenerateFilterXmlEle(Int32 columnCount)
-        {
-            return
-                $@"<autoFilter ref=""A1:{GetExcelColumnName(columnCount)}1"" xr:uid=""{Guid.NewGuid().ToString("B").ToUpper()}""/>";
-        }
-
-        public static String GetExcelColumnName(Int32 columnNumber)
+        public static string GetExcelColumnName(int columnNumber)
         {
             var dividend = columnNumber;
             var columnName = String.Empty;
