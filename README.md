@@ -1,5 +1,14 @@
 # BufferExcelWriter
 
+1. New WorkBookDfn()  
+2. New WorkSheetDfn()  
+2.1 Add header(cells withoutvalue) to sheet  
+3.  OpenWriteExcelAsync  
+4.  Fill data to sheet.BufferRows  
+5.  OpenWriteExcelAsync  
+6.  CloseExcelAndGetStreamAsync
+7.  Dispose
+
 
 Samples Project => BufferExcelWriter.Sample
 
