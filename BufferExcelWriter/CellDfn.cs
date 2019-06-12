@@ -36,8 +36,12 @@ namespace BufferExcelWriter
             {
                 cellValue = nullValSymbol;
             }
-            var strVal = cellValue.Replace("]]>", "]]&gt;");
-            if (strVal.Length > 32766) strVal = strVal.Substring(0, 32766);
+            var strVal = ExcelExportHelper.FilterOddChar(cellValue.Replace("]]>", "]]&gt;"));
+            if (strVal.Length > 32766)
+            {
+                strVal = strVal.Substring(0, 32766);
+            }
+
             return
                 $"<c r=\"{ExcelExportHelper.GetExcelColumnName(columnNumber)}{rowNumber}\" t=\"inlineStr\"><is><t><![CDATA[{strVal}]]></t></is></c>";
         }
