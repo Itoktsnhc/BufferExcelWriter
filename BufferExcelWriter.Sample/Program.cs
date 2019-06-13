@@ -40,13 +40,15 @@ namespace BufferExcelWriter.Sample
             {
                 sw.Reset();
                 var size = 1000;
+                var strad = (char)0xb;
+                var inValidStr = new string(new char[] { strad });
                 foreach (var index in Enumerable.Range(outerIndex * size, size))
                     if (index % 2 == 0)
                         evenSheet.BufferedRows.Add(new RowDfn
                         {
                             Cells = new List<CellDfn>
                             {
-                                new CellDfn("Name", $"fo&o{index}"),
+                                new CellDfn("Name", inValidStr),
                                 new CellDfn("Index", index.ToString())
                             }
                         });

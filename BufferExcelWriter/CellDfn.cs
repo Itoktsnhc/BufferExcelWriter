@@ -36,7 +36,7 @@ namespace BufferExcelWriter
             {
                 cellValue = nullValSymbol;
             }
-            var strVal = ExcelExportHelper.FilterOddChar(cellValue.Replace("]]>", "]]&gt;"));
+            var strVal = ExcelExportHelper.FilterControlChar(cellValue.Replace("]]>", "]]&gt;"));
             if (strVal.Length > 32766)
             {
                 strVal = strVal.Substring(0, 32766);

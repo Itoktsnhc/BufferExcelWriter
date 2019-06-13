@@ -1,12 +1,12 @@
 ﻿using System;
-using System.Text.RegularExpressions;
+using System.Linq;
+using System.Text;
+using System.Xml;
 
 namespace BufferExcelWriter
 {
     public static class ExcelExportHelper
     {
-        private static readonly Regex _pattern = new Regex("[^\u0009\u000A\u000D\u0020-\uD7FF\uE000-\uFFFD\u10000-\u10FFF]+", RegexOptions.Compiled);
-
         public static string GetExcelColumnName(int columnNumber)
         {
             var dividend = columnNumber;
@@ -22,9 +22,32 @@ namespace BufferExcelWriter
             return columnName;
         }
 
-        public static string FilterOddChar(string str)
+        public static string FilterControlChar(string str)
         {
-            return _pattern.Replace(str, "");
+            return new string(str.Where(s => !Char.IsControl(s)).ToArray());
+        }
+
+        public static string StripNonValidXMLCharacters(string textIn)
+        {
+            if (String.IsNullOrEmpty(textIn))
+            {
+                return textIn;
+            }
+
+            var textOut = new StringBuilder(textIn.Length);
+
+            foreach (var current in textIn)
+            {
+                if ((current == 0x9 || current == 0xA || current == 0xB || current == 0xD) ||
+                 ((current >= 0x20) && (current <= 0xD7FF)) ||
+                 ((current >= 0xE000) && (current <= 0xFFFD)) ||
+                 ((current >= 0x10000) && (current <= 0x10FFFF)))
+                {
+                    textOut.Append(current);
+                }
+            }
+
+            return textOut.ToString();
         }
     }
 }
