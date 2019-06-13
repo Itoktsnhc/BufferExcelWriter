@@ -5,7 +5,7 @@ namespace BufferExcelWriter
 {
     public static class ExcelExportHelper
     {
-        private static Regex _pattern = new Regex("[^\u0009\u000A\u000D\u0020-\uD7FF\uE000-\uFFFD\u10000-\u10FFF]+", RegexOptions.Compiled);
+        private static readonly Regex _pattern = new Regex("[^\u0009\u000A\u000D\u0020-\uD7FF\uE000-\uFFFD\u10000-\u10FFF]+", RegexOptions.Compiled);
 
         public static string GetExcelColumnName(int columnNumber)
         {
