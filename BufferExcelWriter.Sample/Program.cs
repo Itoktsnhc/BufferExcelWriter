@@ -12,7 +12,6 @@ namespace BufferExcelWriter.Sample
         private static async Task Main()
         {
             await WriteTestDataAsync1();
-
         }
 
 
@@ -40,10 +39,12 @@ namespace BufferExcelWriter.Sample
             {
                 sw.Reset();
                 var size = 1000;
-                var strad = (char)0xb;
-                var inValidStr = new string(new char[] { strad });
+                var strad = (char) 0xb;
+                var inValidStr = new string(new[] {strad});
                 foreach (var index in Enumerable.Range(outerIndex * size, size))
+                {
                     if (index % 2 == 0)
+                    {
                         evenSheet.BufferedRows.Add(new RowDfn
                         {
                             Cells = new List<CellDfn>
@@ -52,7 +53,9 @@ namespace BufferExcelWriter.Sample
                                 new CellDfn("Index", index.ToString())
                             }
                         });
+                    }
                     else
+                    {
                         oddSheet.BufferedRows.Add(new RowDfn
                         {
                             Cells = new List<CellDfn>
@@ -61,6 +64,9 @@ namespace BufferExcelWriter.Sample
                                 new CellDfn("Index", index.ToString())
                             }
                         });
+                    }
+                }
+
                 sw.Start();
                 await wb.FlushBufferedRowsAsync(true); //flushDataAndClean
                 sw.Stop();
@@ -84,7 +90,5 @@ namespace BufferExcelWriter.Sample
             Console.WriteLine("Over");
             Console.ReadLine();
         }
-
-
     }
 }

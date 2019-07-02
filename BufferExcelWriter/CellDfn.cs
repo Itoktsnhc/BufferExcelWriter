@@ -1,6 +1,4 @@
-﻿using System;
-
-namespace BufferExcelWriter
+﻿namespace BufferExcelWriter
 {
     public class CellDfn
     {
@@ -32,10 +30,11 @@ namespace BufferExcelWriter
         internal string ToXmlString(int rowNumber, int columnNumber, string nullValSymbol = "-")
         {
             var cellValue = CellValue;
-            if (String.IsNullOrEmpty(cellValue))
+            if (string.IsNullOrEmpty(cellValue))
             {
                 cellValue = nullValSymbol;
             }
+
             var strVal = ExcelExportHelper.FilterControlChar(cellValue.Replace("]]>", "]]&gt;"));
             if (strVal.Length > 32766)
             {

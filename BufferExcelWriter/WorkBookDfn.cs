@@ -12,57 +12,77 @@ namespace BufferExcelWriter
 {
     public class WorkBookDfn : IDisposable
     {
-        internal const string WorksheetDefaultHeaders =
+        private const string WorksheetDefaultHeaders =
             "<?xml version=\"1.0\" encoding=\"UTF-8\" standalone=\"yes\"?> <worksheet xmlns=\"http://schemas.openxmlformats.org/spreadsheetml/2006/main\" xmlns:r=\"http://schemas.openxmlformats.org/officeDocument/2006/relationships\" xmlns:mc=\"http://schemas.openxmlformats.org/markup-compatibility/2006\" mc:Ignorable=\"x14ac xr xr2 xr3\" xmlns:x14ac=\"http://schemas.microsoft.com/office/spreadsheetml/2009/9/ac\" xmlns:xr=\"http://schemas.microsoft.com/office/spreadsheetml/2014/revision\" xmlns:xr2=\"http://schemas.microsoft.com/office/spreadsheetml/2015/revision2\" xmlns:xr3=\"http://schemas.microsoft.com/office/spreadsheetml/2016/revision3\" xr:uid=\"{00000000-0001-0000-0000-000000000000}\"> <sheetData>";
 
-        internal const string WorksheetDefaultFooter = "</worksheet>";
-        internal const string SheetDataDefaultFooter = "</sheetData>";
+        private const string WorksheetDefaultFooter = "</worksheet>";
+        private const string SheetDataDefaultFooter = "</sheetData>";
 
         private readonly Dictionary<int, int> _rowOffsetDic = new Dictionary<int, int>();
-        internal string OutPutFilePath;
-        internal Stream OutputStream;
-        internal string WorkingFolder;
+        private readonly string _outPutFilePath;
+        private Stream _outputStream;
+        private readonly string _workingFolder;
 
         public WorkBookDfn(string tempFolderBaseDirectory = null)
         {
-            if (String.IsNullOrEmpty(tempFolderBaseDirectory))
+            if (string.IsNullOrEmpty(tempFolderBaseDirectory))
             {
                 tempFolderBaseDirectory = Environment.CurrentDirectory;
             }
-            WorkingFolder = Path.Combine(tempFolderBaseDirectory, Guid.NewGuid().ToString("N"));
-            if (Directory.Exists(WorkingFolder))
+
+            _workingFolder = Path.Combine(tempFolderBaseDirectory, Guid.NewGuid().ToString("N"));
+            if (Directory.Exists(_workingFolder))
             {
-                var existDir = new DirectoryInfo(WorkingFolder);
+                var existDir = new DirectoryInfo(_workingFolder);
                 existDir.Delete(true);
             }
 
-            Directory.CreateDirectory(WorkingFolder);
-            OutPutFilePath = WorkingFolder + ".zip";
-            if (File.Exists(OutPutFilePath)) File.Delete(OutPutFilePath);
+            Directory.CreateDirectory(_workingFolder);
+            _outPutFilePath = _workingFolder + ".zip";
+            if (File.Exists(_outPutFilePath))
+            {
+                File.Delete(_outPutFilePath);
+            }
+
             var assembly = Assembly.GetExecutingAssembly();
             using (var fs = assembly.GetManifestResourceStream("BufferExcelWriter.exceltemplate"))
             {
-                if (fs == null) throw new FileNotFoundException("BufferExcelWriter.exceltemplate");
+                if (fs == null)
+                {
+                    throw new FileNotFoundException("BufferExcelWriter.exceltemplate");
+                }
+
                 var zipFile = new ZipArchive(fs);
-                zipFile.ExtractToDirectory(WorkingFolder);
+                zipFile.ExtractToDirectory(_workingFolder);
             }
 
             Sheets = new List<WorkSheetDfn>();
-            FolderEntry = new FolderEntry(WorkingFolder);
+            FolderEntry = new FolderEntry(_workingFolder);
         }
 
-        internal FolderEntry FolderEntry { get; set; }
+        private FolderEntry FolderEntry { get; }
         public IList<WorkSheetDfn> Sheets { get; set; }
 
         /// <summary>
-        ///clean temp folder and file
+        ///     clean temp folder and file
         /// </summary>
         public void Dispose()
         {
-            foreach (var sheet in Sheets) sheet.StreamWriter.Dispose();
-            OutputStream.Dispose();
-            if (Directory.Exists(WorkingFolder)) Directory.Delete(WorkingFolder);
-            if (File.Exists(OutPutFilePath)) File.Delete(OutPutFilePath);
+            foreach (var sheet in Sheets.Where(s => s != null))
+            {
+                sheet.StreamWriter?.Dispose();
+            }
+
+            _outputStream?.Dispose();
+            if (Directory.Exists(_workingFolder))
+            {
+                Directory.Delete(_workingFolder);
+            }
+
+            if (File.Exists(_outPutFilePath))
+            {
+                File.Delete(_outPutFilePath);
+            }
         }
 
         public async Task OpenWriteExcelAsync()
@@ -70,7 +90,11 @@ namespace BufferExcelWriter
             for (var i = 0; i < Sheets.Count; i++)
             {
                 var currentSheet = Sheets[i];
-                if (String.IsNullOrWhiteSpace(currentSheet.Name)) currentSheet.Name = $"Sheet{i + 1}";
+                if (string.IsNullOrWhiteSpace(currentSheet.Name))
+                {
+                    currentSheet.Name = $"Sheet{i + 1}";
+                }
+
                 currentSheet.SheetNum = i + 1;
             }
 
@@ -81,7 +105,10 @@ namespace BufferExcelWriter
                 #region Update [Content_Types].xml
 
                 var contentTypeEntry = FolderEntry.GetEntry("[Content_Types].xml");
-                if (contentTypeEntry == null) throw new FileNotFoundException("[Content_Types].xml");
+                if (contentTypeEntry == null)
+                {
+                    throw new FileNotFoundException("[Content_Types].xml");
+                }
 
                 using (var contentTypeStream = contentTypeEntry.Open())
                 {
@@ -114,7 +141,10 @@ namespace BufferExcelWriter
 
                 var identifier = "rId";
                 var relsEntry = FolderEntry.GetEntry("xl/_rels/workbook.xml.rels");
-                if (relsEntry == null) throw new FileNotFoundException("xl/_rels/workbook.xml.rels");
+                if (relsEntry == null)
+                {
+                    throw new FileNotFoundException("xl/_rels/workbook.xml.rels");
+                }
 
                 using (var relsStream = relsEntry.Open())
                 {
@@ -149,7 +179,10 @@ namespace BufferExcelWriter
                 #region Update xl/workbook.xml
 
                 var workbookEntry = FolderEntry.GetEntry("xl/workbook.xml");
-                if (workbookEntry == null) throw new FileNotFoundException("xl/workbook.xml");
+                if (workbookEntry == null)
+                {
+                    throw new FileNotFoundException("xl/workbook.xml");
+                }
 
                 using (var workbookStream = workbookEntry.Open())
                 {
@@ -184,7 +217,10 @@ namespace BufferExcelWriter
                 #region Update docProps/app.xml
 
                 var appEntry = FolderEntry.GetEntry("docProps/app.xml");
-                if (appEntry == null) throw new FileNotFoundException("docProps/app.xml Not Found in FolderEntry");
+                if (appEntry == null)
+                {
+                    throw new FileNotFoundException("docProps/app.xml Not Found in FolderEntry");
+                }
 
                 using (var appStream = appEntry.Open())
                 {
@@ -203,13 +239,15 @@ namespace BufferExcelWriter
                         tmpEle.AppendChild(element);
 
                         if (tmpEle.Attributes != null)
+                        {
                             tmpEle.Attributes["size"].Value =
                                 (Convert.ToInt32(tmpEle.Attributes["size"].Value) + 1).ToString();
+                        }
 
                         var tmp2 = xd.GetElementsByTagName("vt:i4")
                             .Cast<XmlNode>()
                             .Single();
-                        var val = String.IsNullOrWhiteSpace(tmp2.InnerText) ? 1 : Convert.ToInt32(tmp2.InnerText) + 1;
+                        var val = string.IsNullOrWhiteSpace(tmp2.InnerText) ? 1 : Convert.ToInt32(tmp2.InnerText) + 1;
                         tmp2.InnerText = val.ToString();
                         appStream.Position = 0;
                         appStream.SetLength(0);
@@ -227,7 +265,11 @@ namespace BufferExcelWriter
                 sheet.StreamWriter = new StreamWriter(sheet.FileStream);
                 //sheet.FileStream.Position = sheet.FileStream.Length;
                 await sheet.StreamWriter.WriteAsync(WorksheetDefaultHeaders);
-                if (sheet.Header == null) throw new Exception("Header mustn't be null!");
+                if (sheet.Header == null)
+                {
+                    throw new Exception("Header mustn't be null!");
+                }
+
                 await sheet.StreamWriter.WriteAsync(sheet.Header.ToXmlString(1, sheet.Header, sheet.NullValStr));
                 _rowOffsetDic[sheet.SheetNum]++;
 
@@ -244,7 +286,10 @@ namespace BufferExcelWriter
             foreach (var sheet in Sheets)
             {
                 var sheetEntry = FolderEntry.GetEntry(sheet.GetEntryName());
-                if (sheetEntry == null) throw new Exception("Init needed!!");
+                if (sheetEntry == null)
+                {
+                    throw new Exception("Init needed!!");
+                }
 
                 var sb = new StringBuilder();
                 for (var rowIndex = 0; rowIndex < sheet.BufferedRows.Count(); rowIndex++)
@@ -275,17 +320,25 @@ namespace BufferExcelWriter
             foreach (var sheet in Sheets)
             {
                 var sheetEntry = FolderEntry.GetEntry(sheet.GetEntryName());
-                if (sheetEntry == null) throw new FileNotFoundException(sheet.GetEntryName());
+                if (sheetEntry == null)
+                {
+                    throw new FileNotFoundException(sheet.GetEntryName());
+                }
+
                 await sheet.StreamWriter.WriteAsync(SheetDataDefaultFooter);
                 await sheet.StreamWriter.WriteAsync(WorksheetDefaultFooter);
                 await sheet.StreamWriter.FlushAsync();
                 sheet.StreamWriter.Dispose();
             }
 
-            ZipFile.CreateFromDirectory(WorkingFolder, OutPutFilePath, CompressionLevel.Optimal, false);
-            if (Directory.Exists(WorkingFolder)) Directory.Delete(WorkingFolder, true);
-            OutputStream = File.Open(OutPutFilePath, FileMode.Open);
-            return OutputStream;
+            ZipFile.CreateFromDirectory(_workingFolder, _outPutFilePath, CompressionLevel.Optimal, false);
+            if (Directory.Exists(_workingFolder))
+            {
+                Directory.Delete(_workingFolder, true);
+            }
+
+            _outputStream = File.Open(_outPutFilePath, FileMode.Open);
+            return _outputStream;
         }
     }
 
