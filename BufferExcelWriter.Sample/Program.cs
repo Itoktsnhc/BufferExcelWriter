@@ -7,7 +7,7 @@ using System.Threading.Tasks;
 
 namespace BufferExcelWriter.Sample
 {
-    internal class Program
+    public static class Program
     {
         private static async Task Main()
         {
@@ -28,17 +28,18 @@ namespace BufferExcelWriter.Sample
             };
             var oddSheet = new WorkSheetDfn("Odd", header); //add headers
             var evenSheet = new WorkSheetDfn("Even", header);
+
             var wb = new WorkBookDfn("tempFolder");
             wb.Sheets.Add(oddSheet);
             wb.Sheets.Add(evenSheet);
 
 
-            await wb.OpenWriteExcelAsync(); //open write
+            await wb.UpdateSheetRelationshipAsync(); //open write
             var sw = new Stopwatch();
             foreach (var outerIndex in Enumerable.Range(0, 10))
             {
                 sw.Reset();
-                var size = 1000;
+                var size = 100000;
                 var strad = (char) 0xb;
                 var inValidStr = new string(new[] {strad});
                 foreach (var index in Enumerable.Range(outerIndex * size, size))
@@ -67,26 +68,32 @@ namespace BufferExcelWriter.Sample
                     }
                 }
 
+
                 sw.Start();
                 await wb.FlushBufferedRowsAsync(true); //flushDataAndClean
                 sw.Stop();
                 Console.WriteLine(sw.Elapsed);
             }
 
+            var insertSheet = new WorkSheetDfn("aaa", header);
+            wb.Sheets.Add(insertSheet);
+            await wb.UpdateSheetRelationshipAsync(); //open write
+            evenSheet.Header.Cells.Add(new CellDfn("Latter1"));
+            oddSheet.Header.Cells.Add(new CellDfn("Latter2"));
+            sw.Reset();
+            sw.Start();
             using (var fs = File.Create($"{DateTime.Now.Ticks}.xlsx"))
             {
-                using (var stream = wb.CloseExcelAndGetStreamAsync().Result)
+                using (var stream = wb.BuildExcelAndGetStreamAsync().Result)
                 {
                     stream.Position = 0;
                     stream.CopyTo(fs);
                 }
             }
 
-            sw.Reset();
-            sw.Start();
             wb.Dispose();
             sw.Stop();
-            Console.WriteLine($"clean cost : {sw.Elapsed}");
+            Console.WriteLine($"build and clean cost : {sw.Elapsed}");
             Console.WriteLine("Over");
             Console.ReadLine();
         }

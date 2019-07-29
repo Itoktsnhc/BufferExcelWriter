@@ -6,6 +6,7 @@ namespace BufferExcelWriter
 {
     public class RowDfn
     {
+        // ReSharper disable once MemberCanBePrivate.Global
         public IList<CellDfn> Cells { get; set; }
 
         internal string ToXmlString(int rowNumber, RowDfn header, string nullValSymbol = "-")

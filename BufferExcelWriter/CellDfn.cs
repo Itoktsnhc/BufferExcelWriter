@@ -23,6 +23,10 @@
             CellValue = headerName;
         }
 
+        internal CellDfn()
+        {
+        }
+
         public string ColumnHeaderName { get; set; }
         public string CellValue { get; set; }
 

@@ -18,8 +18,11 @@ namespace BufferExcelWriter
         internal string NullValStr { get; set; }
         internal string Name { get; set; }
         internal int SheetNum { get; set; }
-        internal Stream FileStream { get; set; }
-        internal StreamWriter StreamWriter { get; set; }
+        internal Stream SheetFileStream { get; set; }
+        internal Stream TempDataStream { get; set; }
+        internal StreamWriter SheetStreamWriter { get; set; }
+        internal StreamWriter TempDataStreamWriter { get; set; }
+
 
         internal string GetEntryName()
         {

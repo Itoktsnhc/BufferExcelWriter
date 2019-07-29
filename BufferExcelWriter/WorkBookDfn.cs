@@ -4,9 +4,9 @@ using System.IO;
 using System.IO.Compression;
 using System.Linq;
 using System.Reflection;
-using System.Text;
 using System.Threading.Tasks;
 using System.Xml;
+using Newtonsoft.Json;
 
 namespace BufferExcelWriter
 {
@@ -17,50 +17,51 @@ namespace BufferExcelWriter
 
         private const string WorksheetDefaultFooter = "</worksheet>";
         private const string SheetDataDefaultFooter = "</sheetData>";
-
-        private readonly Dictionary<int, int> _rowOffsetDic = new Dictionary<int, int>();
+        private const string WorkingTempFolderName = ".temp";
+        private const string TempBodyFileName = "bodyContent{0}.tmp";
         private readonly string _outPutFilePath;
-        private Stream _outputStream;
+        private readonly string _tempFolder;
         private readonly string _workingFolder;
+        private Stream _outputStream;
 
         public WorkBookDfn(string tempFolderBaseDirectory = null)
         {
-            if (string.IsNullOrEmpty(tempFolderBaseDirectory))
-            {
-                tempFolderBaseDirectory = Environment.CurrentDirectory;
-            }
+            tempFolderBaseDirectory = string.IsNullOrEmpty(tempFolderBaseDirectory)
+                ? Environment.CurrentDirectory
+                : Path.Combine(Environment.CurrentDirectory, tempFolderBaseDirectory);
 
             _workingFolder = Path.Combine(tempFolderBaseDirectory, Guid.NewGuid().ToString("N"));
+            _tempFolder = Path.Combine(_workingFolder, WorkingTempFolderName);
             if (Directory.Exists(_workingFolder))
             {
                 var existDir = new DirectoryInfo(_workingFolder);
                 existDir.Delete(true);
             }
 
+            if (Directory.Exists(_tempFolder))
+            {
+                var existDir = new DirectoryInfo(_tempFolder);
+                existDir.Delete(true);
+            }
+
             Directory.CreateDirectory(_workingFolder);
+            Directory.CreateDirectory(_tempFolder);
             _outPutFilePath = _workingFolder + ".zip";
             if (File.Exists(_outPutFilePath))
             {
                 File.Delete(_outPutFilePath);
             }
 
-            var assembly = Assembly.GetExecutingAssembly();
-            using (var fs = assembly.GetManifestResourceStream("BufferExcelWriter.exceltemplate"))
-            {
-                if (fs == null)
-                {
-                    throw new FileNotFoundException("BufferExcelWriter.exceltemplate");
-                }
-
-                var zipFile = new ZipArchive(fs);
-                zipFile.ExtractToDirectory(_workingFolder);
-            }
-
             Sheets = new List<WorkSheetDfn>();
             FolderEntry = new FolderEntry(_workingFolder);
+            TempFolderEntry = new FolderEntry(_tempFolder);
         }
 
         private FolderEntry FolderEntry { get; }
+        private FolderEntry TempFolderEntry { get; }
+
+        // ReSharper disable once AutoPropertyCanBeMadeGetOnly.Global
+        // ReSharper disable once MemberCanBePrivate.Global
         public IList<WorkSheetDfn> Sheets { get; set; }
 
         /// <summary>
@@ -70,7 +71,8 @@ namespace BufferExcelWriter
         {
             foreach (var sheet in Sheets.Where(s => s != null))
             {
-                sheet.StreamWriter?.Dispose();
+                sheet.SheetStreamWriter?.Dispose();
+                sheet.TempDataStreamWriter?.Dispose();
             }
 
             _outputStream?.Dispose();
@@ -85,8 +87,24 @@ namespace BufferExcelWriter
             }
         }
 
-        public async Task OpenWriteExcelAsync()
+        private void InitFromZipFile()
         {
+            var assembly = Assembly.GetExecutingAssembly();
+            using (var fs = assembly.GetManifestResourceStream("BufferExcelWriter.exceltemplate"))
+            {
+                if (fs == null)
+                {
+                    throw new FileNotFoundException("BufferExcelWriter.ExcelTemplate");
+                }
+
+                var zipFile = new ZipArchive(fs);
+                zipFile.ExtractToDirectory(_workingFolder, true);
+            }
+        }
+
+        public async Task UpdateSheetRelationshipAsync()
+        {
+            InitFromZipFile();
             for (var i = 0; i < Sheets.Count; i++)
             {
                 var currentSheet = Sheets[i];
@@ -100,8 +118,6 @@ namespace BufferExcelWriter
 
             foreach (var sheet in Sheets)
             {
-                _rowOffsetDic[sheet.SheetNum] = 1;
-
                 #region Update [Content_Types].xml
 
                 var contentTypeEntry = FolderEntry.GetEntry("[Content_Types].xml");
@@ -258,20 +274,16 @@ namespace BufferExcelWriter
                 #endregion
 
 
-                #region Init sheetN.xml
+                #region Init sheetN's Temp File.xml
 
-                var sheetEntry = FolderEntry.CreateEntry(sheet.GetEntryName());
-                sheet.FileStream = sheetEntry.Open();
-                sheet.StreamWriter = new StreamWriter(sheet.FileStream);
-                //sheet.FileStream.Position = sheet.FileStream.Length;
-                await sheet.StreamWriter.WriteAsync(WorksheetDefaultHeaders);
-                if (sheet.Header == null)
+                var tempDataEntry = TempFolderEntry.CreateEntry(string.Format(TempBodyFileName, sheet.SheetNum));
+                if (sheet.TempDataStreamWriter != null)
                 {
-                    throw new Exception("Header mustn't be null!");
+                    continue;
                 }
 
-                await sheet.StreamWriter.WriteAsync(sheet.Header.ToXmlString(1, sheet.Header, sheet.NullValStr));
-                _rowOffsetDic[sheet.SheetNum]++;
+                sheet.TempDataStream = tempDataEntry.Open();
+                sheet.TempDataStreamWriter = new StreamWriter(sheet.TempDataStream);
 
                 #endregion
             }
@@ -291,17 +303,12 @@ namespace BufferExcelWriter
                     throw new Exception("Init needed!!");
                 }
 
-                var sb = new StringBuilder();
-                for (var rowIndex = 0; rowIndex < sheet.BufferedRows.Count(); rowIndex++)
+                foreach (var currentRow in sheet.BufferedRows)
                 {
-                    var currentRow = sheet.BufferedRows[rowIndex];
-                    sb.Append(currentRow.ToXmlString(_rowOffsetDic[sheet.SheetNum], sheet.Header,
-                        sheet.NullValStr));
-                    _rowOffsetDic[sheet.SheetNum]++;
+                    await sheet.TempDataStreamWriter.WriteLineAsync(JsonConvert.SerializeObject(currentRow));
                 }
 
-                await sheet.StreamWriter.WriteAsync(sb.ToString());
-                await sheet.StreamWriter.FlushAsync();
+                await sheet.TempDataStreamWriter.FlushAsync();
                 sheet.BufferedRows.Clear();
             }
 
@@ -315,22 +322,14 @@ namespace BufferExcelWriter
         ///     write end info to file and get file stream back
         /// </summary>
         /// <returns></returns>
-        public async Task<Stream> CloseExcelAndGetStreamAsync()
+        public async Task<Stream> BuildExcelAndGetStreamAsync()
         {
             foreach (var sheet in Sheets)
             {
-                var sheetEntry = FolderEntry.GetEntry(sheet.GetEntryName());
-                if (sheetEntry == null)
-                {
-                    throw new FileNotFoundException(sheet.GetEntryName());
-                }
-
-                await sheet.StreamWriter.WriteAsync(SheetDataDefaultFooter);
-                await sheet.StreamWriter.WriteAsync(WorksheetDefaultFooter);
-                await sheet.StreamWriter.FlushAsync();
-                sheet.StreamWriter.Dispose();
+                await GenerateSheetFileAsync(sheet);
             }
 
+            Directory.Delete(_tempFolder, true);
             ZipFile.CreateFromDirectory(_workingFolder, _outPutFilePath, CompressionLevel.Optimal, false);
             if (Directory.Exists(_workingFolder))
             {
@@ -339,6 +338,39 @@ namespace BufferExcelWriter
 
             _outputStream = File.Open(_outPutFilePath, FileMode.Open);
             return _outputStream;
+        }
+
+        private async Task GenerateSheetFileAsync(WorkSheetDfn sheet)
+        {
+            var sheetEntry = FolderEntry.GetEntry(sheet.GetEntryName());
+            if (sheetEntry == null)
+            {
+                throw new FileNotFoundException(sheet.GetEntryName());
+            }
+
+            sheet.SheetFileStream = sheetEntry.Open();
+            sheet.SheetStreamWriter = new StreamWriter(sheet.SheetFileStream);
+            await sheet.SheetStreamWriter.WriteAsync(WorksheetDefaultHeaders);
+            var rowNumber = 1;
+            await sheet.SheetStreamWriter.WriteAsync(sheet.Header.ToXmlString(rowNumber, sheet.Header,
+                sheet.NullValStr));
+            sheet.TempDataStream.Seek(0, SeekOrigin.Begin);
+            var streamReader = new StreamReader(sheet.TempDataStream);
+            while (!streamReader.EndOfStream)
+            {
+                rowNumber++;
+                var line = await streamReader.ReadLineAsync();
+                var currentRow = JsonConvert.DeserializeObject<RowDfn>(line);
+                await sheet.SheetStreamWriter.WriteAsync(currentRow.ToXmlString(rowNumber,
+                    sheet.Header,
+                    sheet.NullValStr));
+            }
+
+            await sheet.SheetStreamWriter.WriteAsync(SheetDataDefaultFooter);
+            await sheet.SheetStreamWriter.WriteAsync(WorksheetDefaultFooter);
+            await sheet.SheetStreamWriter.FlushAsync();
+            sheet.SheetStreamWriter?.Dispose();
+            sheet.TempDataStreamWriter.Dispose();
         }
     }
 
