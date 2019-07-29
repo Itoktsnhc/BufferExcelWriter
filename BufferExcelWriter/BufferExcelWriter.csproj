@@ -2,15 +2,19 @@
 
   <PropertyGroup>
     <TargetFramework>netstandard2.0</TargetFramework>
-    <Version>0.0.8</Version>
+    <Version>0.1.0</Version>
     <Authors>itoktsnhc@hotmail.com</Authors>
     <Description>BufferExcelWriter</Description>
-    <PackageLicenseUrl>https://github.com/Itoktsnhc/BufferExcelWriter/blob/master/LICENSE</PackageLicenseUrl>
+    <PackageLicenseUrl></PackageLicenseUrl>
     <PackageProjectUrl>https://github.com/Itoktsnhc/BufferExcelWriter</PackageProjectUrl>
     <RepositoryUrl>https://github.com/Itoktsnhc/BufferExcelWriter</RepositoryUrl>
-    <PackageReleaseNotes>remove controlChar</PackageReleaseNotes>
-    <PackageVersion>0.0.8</PackageVersion>
+    <PackageReleaseNotes>impove flexibility, now you can upload sheet relationship multi time, and dynamic update sheet headers</PackageReleaseNotes>
+    <PackageVersion>0.1.0</PackageVersion>
     <PackageRequireLicenseAcceptance>true</PackageRequireLicenseAcceptance>
+    <Copyright>itoktsnhc@hotmail.com</Copyright>
+    <Company />
+    <PackageLicenseExpression>MIT</PackageLicenseExpression>
+    <PackageTags>Excel</PackageTags>
   </PropertyGroup>
 
   <ItemGroup>
