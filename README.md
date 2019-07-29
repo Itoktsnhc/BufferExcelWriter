@@ -2,7 +2,7 @@
 
 1. New WorkBookDfn()  
 2. New WorkSheetDfn()  
-2.1 Add header(cells withoutvalue) to sheet  
+    2.1. Add header(cells withoutvalue) to sheet's header
 3.  UpdateSheetRelationshipAsync  
 4.  Fill data to sheet.BufferRows  
 5.  repeat 3 -> 4
