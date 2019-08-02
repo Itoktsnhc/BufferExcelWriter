@@ -1,4 +1,7 @@
-﻿namespace BufferExcelWriter
+﻿// ReSharper disable MemberCanBePrivate.Global
+// ReSharper disable AutoPropertyCanBeMadeGetOnly.Local
+// ReSharper disable AutoPropertyCanBeMadeGetOnly.Global
+namespace BufferExcelWriter
 {
     public class CellDfn
     {
@@ -23,12 +26,16 @@
             CellValue = headerName;
         }
 
+        /// <summary>
+        /// for json deserialize
+        /// </summary>
+        // ReSharper disable once UnusedMember.Global
         internal CellDfn()
         {
         }
 
         public string ColumnHeaderName { get; set; }
-        public string CellValue { get; set; }
+        private string CellValue { get; set; }
 
 
         internal string ToXmlString(int rowNumber, int columnNumber, string nullValSymbol = "-")

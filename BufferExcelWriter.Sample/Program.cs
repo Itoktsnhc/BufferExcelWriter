@@ -11,11 +11,50 @@ namespace BufferExcelWriter.Sample
     {
         private static async Task Main()
         {
-            await WriteTestDataAsync1();
+            await WriteTestDataAsyncSample0();
+            await WriteTestDataAsyncSample1();
         }
 
+        private static async Task WriteTestDataAsyncSample0()
+        {
+            var header = new RowDfn
+            {
+                Cells = new List<CellDfn>
+                {
+                    new CellDfn("Name"),
+                    new CellDfn("Val"),
+                    new CellDfn("noVal") //no value cell 
+                }
+            };
+            //add headers
+            var sheet = new WorkSheetDfn("Odd", header);
 
-        public static async Task WriteTestDataAsync1()
+            sheet.BufferedRows.Add(new RowDfn
+            {
+                Cells = new List<CellDfn>
+                {
+                    new CellDfn("Name", "Hello"),
+                    new CellDfn("Val", "World")
+                }
+            });
+
+            //output
+            using (var wb = new WorkBookDfn("tempFolder"))
+            {
+                wb.Sheets.Add(sheet);
+                await wb.FlushBufferedRowsAsync(true);
+                using (var fs = File.Create($"{DateTime.Now.Ticks}.xlsx"))
+                {
+                    using (var stream = wb.BuildExcelAndGetStreamAsync().Result)
+                    {
+                        stream.Position = 0;
+                        stream.CopyTo(fs);
+                    }
+                }
+            }
+        }
+
+        private static async Task WriteTestDataAsyncSample1()
         {
             var header = new RowDfn
             {
@@ -34,12 +73,11 @@ namespace BufferExcelWriter.Sample
             wb.Sheets.Add(evenSheet);
 
 
-            await wb.UpdateSheetRelationshipAsync(); //open write
             var sw = new Stopwatch();
             foreach (var outerIndex in Enumerable.Range(0, 10))
             {
                 sw.Reset();
-                var size = 100000;
+                var size = 10000;
                 var strad = (char) 0xb;
                 var inValidStr = new string(new[] {strad});
                 foreach (var index in Enumerable.Range(outerIndex * size, size))
@@ -77,7 +115,6 @@ namespace BufferExcelWriter.Sample
 
             var insertSheet = new WorkSheetDfn("aaa", header);
             wb.Sheets.Add(insertSheet);
-            await wb.UpdateSheetRelationshipAsync(); //open write
             evenSheet.Header.Cells.Add(new CellDfn("Latter1"));
             oddSheet.Header.Cells.Add(new CellDfn("Latter2"));
             sw.Reset();

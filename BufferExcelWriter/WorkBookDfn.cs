@@ -7,6 +7,8 @@ using System.Reflection;
 using System.Threading.Tasks;
 using System.Xml;
 using Newtonsoft.Json;
+// ReSharper disable once AutoPropertyCanBeMadeGetOnly.Global
+// ReSharper disable once MemberCanBePrivate.Global
 
 namespace BufferExcelWriter
 {
@@ -24,13 +26,19 @@ namespace BufferExcelWriter
         private readonly string _workingFolder;
         private Stream _outputStream;
 
-        public WorkBookDfn(string tempFolderBaseDirectory = null)
+        public WorkBookDfn(string baseDir = null)
         {
-            tempFolderBaseDirectory = string.IsNullOrEmpty(tempFolderBaseDirectory)
-                ? Environment.CurrentDirectory
-                : Path.Combine(Environment.CurrentDirectory, tempFolderBaseDirectory);
+            if (string.IsNullOrEmpty(baseDir))
+            {
+                baseDir = Environment.CurrentDirectory;
+            }
 
-            _workingFolder = Path.Combine(tempFolderBaseDirectory, Guid.NewGuid().ToString("N"));
+            if (!Path.IsPathRooted(baseDir))
+            {
+                baseDir = Path.Combine(Environment.CurrentDirectory, baseDir);
+            }
+
+            _workingFolder = Path.Combine(baseDir, Guid.NewGuid().ToString("N"));
             _tempFolder = Path.Combine(_workingFolder, WorkingTempFolderName);
             if (Directory.Exists(_workingFolder))
             {
@@ -60,8 +68,7 @@ namespace BufferExcelWriter
         private FolderEntry FolderEntry { get; }
         private FolderEntry TempFolderEntry { get; }
 
-        // ReSharper disable once AutoPropertyCanBeMadeGetOnly.Global
-        // ReSharper disable once MemberCanBePrivate.Global
+
         public IList<WorkSheetDfn> Sheets { get; set; }
 
         /// <summary>
@@ -69,12 +76,6 @@ namespace BufferExcelWriter
         /// </summary>
         public void Dispose()
         {
-            foreach (var sheet in Sheets.Where(s => s != null))
-            {
-                sheet.SheetStreamWriter?.Dispose();
-                sheet.TempDataStreamWriter?.Dispose();
-            }
-
             _outputStream?.Dispose();
             if (Directory.Exists(_workingFolder))
             {
@@ -102,19 +103,10 @@ namespace BufferExcelWriter
             }
         }
 
-        public async Task UpdateSheetRelationshipAsync()
+        private async Task UpdateSheetRelationshipAsync()
         {
             InitFromZipFile();
-            for (var i = 0; i < Sheets.Count; i++)
-            {
-                var currentSheet = Sheets[i];
-                if (string.IsNullOrWhiteSpace(currentSheet.Name))
-                {
-                    currentSheet.Name = $"Sheet{i + 1}";
-                }
-
-                currentSheet.SheetNum = i + 1;
-            }
+            UpdateSheetNum();
 
             foreach (var sheet in Sheets)
             {
@@ -272,20 +264,20 @@ namespace BufferExcelWriter
                 }
 
                 #endregion
+            }
+        }
 
-
-                #region Init sheetN's Temp File.xml
-
-                var tempDataEntry = TempFolderEntry.CreateEntry(string.Format(TempBodyFileName, sheet.SheetNum));
-                if (sheet.TempDataStreamWriter != null)
+        private void UpdateSheetNum()
+        {
+            for (var i = 0; i < Sheets.Count; i++)
+            {
+                var currentSheet = Sheets[i];
+                if (string.IsNullOrWhiteSpace(currentSheet.Name))
                 {
-                    continue;
+                    currentSheet.Name = $"Sheet{i + 1}";
                 }
 
-                sheet.TempDataStream = tempDataEntry.Open();
-                sheet.TempDataStreamWriter = new StreamWriter(sheet.TempDataStream);
-
-                #endregion
+                currentSheet.SheetNum = i + 1;
             }
         }
 
@@ -295,8 +287,16 @@ namespace BufferExcelWriter
         /// <returns></returns>
         public async Task FlushBufferedRowsAsync(bool needGc = false)
         {
+            UpdateSheetNum();
             foreach (var sheet in Sheets)
             {
+                var tempDataEntry = TempFolderEntry.CreateEntry(string.Format(TempBodyFileName, sheet.SheetNum));
+                if (sheet.TempDataStreamWriter == null)
+                {
+                    sheet.TempDataStream = tempDataEntry.Open();
+                    sheet.TempDataStreamWriter = new StreamWriter(sheet.TempDataStream);
+                }
+
                 var sheetEntry = FolderEntry.GetEntry(sheet.GetEntryName());
                 if (sheetEntry == null)
                 {
@@ -321,9 +321,16 @@ namespace BufferExcelWriter
         /// <summary>
         ///     write end info to file and get file stream back
         /// </summary>
-        /// <returns></returns>
-        public async Task<Stream> BuildExcelAndGetStreamAsync()
+        public async Task<Stream> BuildExcelAndGetStreamAsync(bool needGc = true)
         {
+            if (Sheets.Count == 0)
+            {
+                throw new InvalidOperationException("no sheet in workbook");
+            }
+
+            await FlushBufferedRowsAsync(needGc);
+            await UpdateSheetRelationshipAsync();
+
             foreach (var sheet in Sheets)
             {
                 await GenerateSheetFileAsync(sheet);
@@ -349,28 +356,33 @@ namespace BufferExcelWriter
             }
 
             sheet.SheetFileStream = sheetEntry.Open();
-            sheet.SheetStreamWriter = new StreamWriter(sheet.SheetFileStream);
-            await sheet.SheetStreamWriter.WriteAsync(WorksheetDefaultHeaders);
-            var rowNumber = 1;
-            await sheet.SheetStreamWriter.WriteAsync(sheet.Header.ToXmlString(rowNumber, sheet.Header,
-                sheet.NullValStr));
-            sheet.TempDataStream.Seek(0, SeekOrigin.Begin);
-            var streamReader = new StreamReader(sheet.TempDataStream);
-            while (!streamReader.EndOfStream)
+            using (sheet.SheetStreamWriter = new StreamWriter(sheet.SheetFileStream))
             {
-                rowNumber++;
-                var line = await streamReader.ReadLineAsync();
-                var currentRow = JsonConvert.DeserializeObject<RowDfn>(line);
-                await sheet.SheetStreamWriter.WriteAsync(currentRow.ToXmlString(rowNumber,
-                    sheet.Header,
+                await sheet.SheetStreamWriter.WriteAsync(WorksheetDefaultHeaders);
+                var rowNumber = 1;
+                await sheet.SheetStreamWriter.WriteAsync(sheet.Header.ToXmlString(rowNumber, sheet.Header,
                     sheet.NullValStr));
-            }
+                if (sheet.TempDataStream != null)
+                {
+                    sheet.TempDataStream.Seek(0, SeekOrigin.Begin);
+                    using (var streamReader = new StreamReader(sheet.TempDataStream))
+                    {
+                        while (!streamReader.EndOfStream)
+                        {
+                            rowNumber++;
+                            var line = await streamReader.ReadLineAsync();
+                            var currentRow = JsonConvert.DeserializeObject<RowDfn>(line);
+                            await sheet.SheetStreamWriter.WriteAsync(currentRow.ToXmlString(rowNumber,
+                                sheet.Header,
+                                sheet.NullValStr));
+                        }
+                    }
+                }
 
-            await sheet.SheetStreamWriter.WriteAsync(SheetDataDefaultFooter);
-            await sheet.SheetStreamWriter.WriteAsync(WorksheetDefaultFooter);
-            await sheet.SheetStreamWriter.FlushAsync();
-            sheet.SheetStreamWriter?.Dispose();
-            sheet.TempDataStreamWriter.Dispose();
+                await sheet.SheetStreamWriter.WriteAsync(SheetDataDefaultFooter);
+                await sheet.SheetStreamWriter.WriteAsync(WorksheetDefaultFooter);
+                await sheet.SheetStreamWriter.FlushAsync();
+            }
         }
     }
 

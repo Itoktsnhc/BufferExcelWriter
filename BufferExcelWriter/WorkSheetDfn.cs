@@ -1,5 +1,7 @@
 ﻿using System.Collections.Generic;
 using System.IO;
+// ReSharper disable MemberCanBePrivate.Global
+// ReSharper disable AutoPropertyCanBeMadeGetOnly.Global
 
 namespace BufferExcelWriter
 {
