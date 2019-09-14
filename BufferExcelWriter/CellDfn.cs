@@ -35,7 +35,7 @@ namespace BufferExcelWriter
         }
 
         public string ColumnHeaderName { get; set; }
-        private string CellValue { get; set; }
+        public string CellValue { get; set; }
 
 
         internal string ToXmlString(int rowNumber, int columnNumber, string nullValSymbol = "-")
